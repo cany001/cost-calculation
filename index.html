@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cost Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        };
+    </script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f3f4f6;
+        }
+
+        body.dark ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        body.dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+
+        /* Remove number input spinners */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-slate-900 min-h-screen transition-colors duration-300">
+    
+    <div class="max-w-7xl mx-auto p-4 md:p-6">
+
+
+        <!-- EDIT MODE MODAL -->
+        <div id="editModeModal"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 transition-all">
+
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        Edit Mode
+                    </h3>
+                    <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700 dark:hover:text-white">
+                        ✕
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="space-y-4">
+
+                    <p class="text-sm text-gray-600 dark:text-slate-400">
+                        Add or edit item name and unit price.
+                    </p>
+
+                    <!-- Items Container -->
+                    <div id="itemEditor" class="space-y-3 max-h-64 overflow-y-auto">
+                        <!-- Default Row -->
+                        <div class="flex gap-2">
+                            <input type="text" placeholder="Item name" onfocus="this.select()"
+                                class="w-2/3 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+
+                            <input type="number" placeholder="Unit price" onfocus="this.select()"
+                                class="w-1/3 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                    </div>
+
+                    <!-- Add New Item -->
+                    <button onclick="addNewItem()"
+                        class="w-full py-2 border border-dashed border-indigo-400 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-50 dark:hover:bg-slate-700">
+                        + Add New Item
+                    </button>
+
+                    <!-- Save Button -->
+                    <button id="saveEditBtn" onclick="saveItemsFromEditMode(event)"
+                        class="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">
+                        Save Items
+                    </button>
+
+                </div>
+            </div>
+        </div>
+
+
+        <!-- HEADER -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-6 mb-6 transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-indigo-600 dark:bg-indigo-500 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Cost Calculator</h1>
+                        <p class="text-sm text-gray-500 dark:text-slate-400">Calculate your project costs with ease</p>
+                    </div>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button id="themeToggleButton" onclick="toggleTheme()"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+                    <span class="text-sm font-medium text-gray-700 dark:text-slate-200" id="themeLabel">Dark</span>
+                    <svg class="w-5 h-5 text-gray-600 dark:text-slate-300" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 1v6m0 6v6m11-6h-6m-6 0H1"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm transition-all duration-300">
+            <!-- Section Header -->
+            <div class="p-6 border-b border-gray-200 dark:border-slate-700">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Item Cost Breakdown</h2>
+                        <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">Select items and quantities to
+                            calculate total cost</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="resetAll()"
+                            class="px-4 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                </path>
+                            </svg>
+                            Reset All
+                        </button>
+                        <button onclick="openEditModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium 
+    hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                            ✏️ Edit Mode
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table - Desktop View -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-slate-900/50">
+                        <tr>
+                            <th
+                                class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 w-16">
+                                No.</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-slate-400">Item
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-slate-400">
+                                Quantity</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-slate-400">Unit
+                                Price (₹)</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-slate-400">
+                                Total (₹)</th>
+                            <th
+                                class="px-6 py-3 text-center text-xs font-semibold text-gray-600 dark:text-slate-400 w-20">
+                                Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyDesktop" class="divide-y divide-gray-200 dark:divide-slate-700">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="md:hidden p-4 space-y-4" id="mobileCards">
+            </div>
+
+
+            <div class="p-4">
+                <button onclick="addRow()" class="w-full py-4 px-6 
+           border-2 border-dashed border-indigo-400 
+           text-indigo-600 font-semibold text-lg
+           rounded-xl
+           cursor-pointer
+           flex items-center justify-center gap-3
+           transition-all duration-200
+           hover:bg-indigo-50 hover:border-indigo-600 hover:text-indigo-700
+           active:scale-95
+           dark:border-indigo-500 dark:text-indigo-400
+           dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300">
+
+                    <span class="text-2xl leading-none">＋</span>
+                    <span>Add Row</span>
+                </button>
+            </div>
+
+
+            <!-- GRAND TOTAL SECTION -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-6 mt-6 transition-all duration-300">
+                <div class="mb-6">
+                    <div class="text-sm font-medium text-gray-500 dark:text-slate-400 mb-2">Total Estimated Cost</div>
+                    <div class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+                        ₹<span id="grandTotal">0</span>
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-slate-400 mt-2">
+                        <span id="itemCount">0</span> items selected
+                    </div>
+                </div>
+                <button onclick="generateReport()"
+                    class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    Generate Report
+                </button>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="text-center text-xs text-gray-500 dark:text-slate-500 mt-6 px-4">
+                All prices are in Indian Rupees (₹). Prices may vary based on location and supplier.
+            </div>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+            import {
+                getFirestore,
+                collection,
+                getDocs,
+                addDoc,
+                updateDoc,
+                deleteDoc,
+                doc
+            } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyAbLPoTln3lXC1QGmrB6Osvw1Fjxip-bV8",
+                authDomain: "cost-calculator-f3f6b.firebaseapp.com",
+                projectId: "cost-calculator-f3f6b",
+                storageBucket: "cost-calculator-f3f6b.firebasestorage.app",
+                messagingSenderId: "518252248420",
+                appId: "1:518252248420:web:b9e5cddba2fdfbe5a28e71"
+            };
+
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const itemsRef = collection(db, "items");
+            let globalItems = [];
+
+            async function fetchItemsOnce() {
+                globalItems = [];
+
+                const snapshot = await getDocs(itemsRef);
+                snapshot.forEach(docSnap => {
+                    globalItems.push({
+                        id: docSnap.id,
+                        name: docSnap.data().name,
+                        price: docSnap.data().price
+                    });
+                });
+            }
+
+
+            /* ================= LOAD ITEMS ================= */
+            window.loadItemsForEdit = async function () {
+                const editor = document.getElementById("itemEditor");
+                editor.innerHTML = "";
+
+                const snapshot = await getDocs(itemsRef);
+
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+
+                    editor.innerHTML += `
+      <div class="flex gap-2 items-center" data-id="${docSnap.id}">
+        <input type="text" onfocus="this.select()" value="${data.name}"
+          class="w-2/3 px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-sm"/>
+
+        <input type="number" onfocus="this.select()" value="${data.price}"
+          class="w-1/3 px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-sm"/>
+
+        <button onclick="removeItemRow(this)""
+          class="text-red-500 hover:text-red-700 text-sm">
+          ✕
+        </button>
+      </div>
+    `;
+                });
+            };
+
+            /* ================= ADD NEW ROW ================= */
+            window.addNewItem = function () {
+                const editor = document.getElementById("itemEditor");
+
+                const row = document.createElement("div");
+                row.className = "flex gap-2 items-center";
+
+                // generate temporary unique id for new rows
+                const tempId = "temp-" + Date.now();
+                row.setAttribute("data-id", tempId);
+
+                row.innerHTML = `
+                    <input type="text" onfocus="this.select()" placeholder="Item name"
+                        class="w-2/3 px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-sm"/>
+
+                    <input type="number" onfocus="this.select()" placeholder="Unit price"
+                        class="w-1/3 px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-sm"/>
+
+                    <button onclick="removeItemRow(this)"
+                        class="text-red-500 hover:text-red-700 text-sm">✕</button>
+                `;
+
+                editor.appendChild(row);
+                const firstInput = row.querySelector('input[type="text"]');
+                if (firstInput) firstInput.focus();
+            };
+
+
+            /* ================= SAVE ITEMS ================= */
+            window.saveItemsFromEditMode = async function (event) {
+                const saveBtn = event?.target || document.querySelector("#saveEditBtn");
+                saveBtn.disabled = true;
+                saveBtn.textContent = "Saving...";
+
+
+                const editor = document.getElementById("itemEditor");
+                const rows = editor.querySelectorAll("div[data-id]");
+
+                // Fetch all existing IDs from DB
+                const snapshot = await getDocs(itemsRef);
+                const existingIds = snapshot.docs.map(docSnap => docSnap.id);
+
+                // Track which DB IDs should remain
+                const currentIds = [];
+
+                for (const row of rows) {
+                    const inputs = row.querySelectorAll("input");
+                    const name = inputs[0].value.trim();
+                    const price = Number(inputs[1].value);
+
+                    if (!name || price <= 0) continue;
+
+                    const id = row.getAttribute("data-id");
+
+                    if (id.startsWith("temp-")) {
+                        // New item → add to DB
+                        const docRef = await addDoc(itemsRef, { name, price });
+                        row.setAttribute("data-id", docRef.id); // assign DB id to row
+                        currentIds.push(docRef.id);
+                    } else {
+                        // Existing → update DB
+                        await updateDoc(doc(db, "items", id), { name, price });
+                        currentIds.push(id);
+                    }
+                }
+
+                // Delete items removed from DOM
+                for (const docId of existingIds) {
+                    if (!currentIds.includes(docId)) {
+                        await deleteDoc(doc(db, "items", docId));
+                    }
+                }
+
+                await fetchItemsOnce(); // reload globalItems
+
+                // Update dropdowns
+                document.querySelectorAll("#tableBodyDesktop tr").forEach(row => {
+                    const id = row.dataset.rowId;
+                    populateDropdown(id, document.getElementById(`item-${id}`).value);
+                });
+
+                closeEditModal();
+                saveBtn.disabled = false;
+                saveBtn.textContent = "Save Items";
+            };
+
+
+
+
+            /* ================= DELETE ITEM ================= */
+            window.deleteItem = async function (id) {
+                await deleteDoc(doc(db, "items", id));
+                loadItemsForEdit();
+            };
+
+            window.removeItemRow = function (btn) {
+                const row = btn.parentElement;
+                row.remove(); // sirf UI se remove, DB me kuch nahi hota
+            };
+
+            function populateDropdown(rowId, selectedItemId = null) {
+                const desktopSelect = document.getElementById(`item-${rowId}`);
+                const mobileSelect = document.getElementById(`item-mobile-${rowId}`);
+
+                let optionsHTML = `<option value="">Select item</option>`;
+
+                const sortedItems = [...globalItems].sort((a, b) => a.name.localeCompare(b.name));
+
+                sortedItems.forEach(item => {
+                    optionsHTML += `<option value="${item.id}" data-price="${item.price}">${item.name}</option>`;
+                });
+
+                if (desktopSelect) desktopSelect.innerHTML = optionsHTML;
+                if (mobileSelect) mobileSelect.innerHTML = optionsHTML;
+
+                if (selectedItemId) {
+                    if (desktopSelect) desktopSelect.value = selectedItemId;
+                    if (mobileSelect) mobileSelect.value = selectedItemId;
+                }
+            }
+
+
+            let rowCounter = 0;
+            const MIN_ROWS = 3;
+
+            window.toggleTheme = function () {
+                const body = document.body;
+                const isDark = body.classList.toggle("dark");
+                const themeLabel = document.getElementById("themeLabel");
+                const themeIcon = document.querySelector('#themeToggleButton svg');
+                if (isDark) {
+                    themeLabel.textContent = "Light";
+                    themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+                } else {
+                    themeLabel.textContent = "Dark";
+                    themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><path d="M12 1v6m0 6v6m11-6h-6m-6 0H1"></path>';
+                }
+            }
+
+            document.addEventListener("DOMContentLoaded", async () => {
+                await fetchItemsOnce();   // 🔥 IMPORTANT
+                for (let i = 0; i < MIN_ROWS; i++) addRow();
+                calculateGrandTotal();
+            });
+
+
+            window.addRow = function () {
+                rowCounter++;
+
+                // Desktop Row
+                const tbody = document.getElementById("tableBodyDesktop");
+                const tr = document.createElement("tr");
+                tr.id = `row-${rowCounter}`;
+                tr.dataset.rowId = rowCounter;
+                tr.className = "hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors";
+
+                tr.innerHTML = `
+          <td class="px-6 py-4 text-center text-sm text-gray-700 dark:text-slate-300">
+            <span class="row-number"></span>
+          </td>
+          <td class="px-6 py-4">
+            <select id="item-${rowCounter}" 
+              class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm"
+              onchange="updateRow(${rowCounter})">
+            </select>
+          </td>
+          <td class="px-6 py-4">
+            <input type="number" onfocus="this.select()" id="qty-${rowCounter}" value="1" min="0"
+              class="w-24 px-3 py-2 text-center border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all text-sm"
+              oninput="updateRow(${rowCounter})">
+          </td>
+          <td class="px-6 py-4">
+            <input onfocus="this.select()" id="price-${rowCounter}" 
+              class="w-full px-3 py-2 text-center border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm" 
+              readonly value="₹0">
+          </td>
+          <td class="px-6 py-4">
+            <input onfocus="this.select()" id="total-${rowCounter}" 
+              class="w-full px-3 py-2 text-center border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium" 
+              readonly value="₹0">
+          </td>
+          <td class="px-6 py-4 text-center">
+            <button onclick="deleteRow(${rowCounter})" 
+              class="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </td>
+        `;
+                tbody.appendChild(tr);
+
+                // Mobile Card
+                const mobileCards = document.getElementById("mobileCards");
+                const card = document.createElement("div");
+                card.id = `card-${rowCounter}`;
+                card.dataset.rowId = rowCounter;
+                card.className = "bg-gray-50 dark:bg-slate-700 rounded-xl p-4 border border-gray-200 dark:border-slate-600";
+
+                card.innerHTML = `
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-sm font-semibold text-gray-700 dark:text-slate-300">Row #<span class="row-number-mobile"></span></div>
+            <button onclick="deleteRow(${rowCounter})" 
+              class="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Item</label>
+              <select id="item-mobile-${rowCounter}" 
+                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                onchange="updateRowMobile(${rowCounter})">
+              </select>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Quantity</label>
+                <input type="number" onfocus="this.select()" id="qty-mobile-${rowCounter}" value="1" min="0"
+                  class="w-full px-3 py-2 text-center border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                  oninput="updateRowMobile(${rowCounter})">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Unit Price</label>
+                <input onfocus="this.select()" id="price-mobile-${rowCounter}" 
+                  class="w-full px-3 py-2 text-center border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-900 text-gray-700 dark:text-slate-300 text-sm" 
+                  readonly value="₹0">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Total</label>
+                <input onfocus="this.select()" id="total-mobile-${rowCounter}" 
+                  class="w-full px-3 py-2 text-center border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-900 text-gray-700 dark:text-slate-300 text-sm font-medium" 
+                  readonly value="₹0">
+              </div>
+            </div>
+          </div>
+        `;
+                mobileCards.appendChild(card);
+
+                renumberRows();
+                populateDropdown(rowCounter);
+                const newSelect = document.getElementById(`item-${rowCounter}`);
+                if (newSelect) newSelect.focus();
+
+            }
+
+            window.deleteRow = function (id) {
+                const rows = document.querySelectorAll("#tableBodyDesktop tr");
+                if (rows.length <= MIN_ROWS) {
+                    alert("Minimum 3 rows required");
+                    return;
+                }
+                document.getElementById(`row-${id}`)?.remove();
+                document.getElementById(`card-${id}`)?.remove();
+                renumberRows();
+                calculateGrandTotal();
+            }
+
+            function renumberRows() {
+                document.querySelectorAll(".row-number").forEach((el, i) => {
+                    el.textContent = i + 1;
+                });
+                document.querySelectorAll(".row-number-mobile").forEach((el, i) => {
+                    el.textContent = i + 1;
+                });
+            }
+
+            window.updateRow = function (id) {
+                const select = document.getElementById(`item-${id}`);
+                const selectedOption = select.options[select.selectedIndex];
+
+                const price = Number(selectedOption.dataset.price || 0);
+                const qty = Number(document.getElementById(`qty-${id}`).value) || 0;
+
+                document.getElementById(`price-${id}`).value = "₹" + format(price);
+                document.getElementById(`total-${id}`).value = "₹" + format(price * qty);
+
+                // sync mobile
+                const mobileSelect = document.getElementById(`item-mobile-${id}`);
+                if (mobileSelect) {
+                    mobileSelect.value = select.value;
+                    document.getElementById(`qty-mobile-${id}`).value = qty;
+                    document.getElementById(`price-mobile-${id}`).value = "₹" + format(price);
+                    document.getElementById(`total-mobile-${id}`).value = "₹" + format(price * qty);
+                }
+
+                calculateGrandTotal();
+            }
+
+
+            window.updateRowMobile = function (id) {
+                const select = document.getElementById(`item-mobile-${id}`);
+                const selectedOption = select.options[select.selectedIndex];
+
+                const price = Number(selectedOption.dataset.price || 0);
+                const qty = Number(document.getElementById(`qty-mobile-${id}`).value) || 0;
+
+                document.getElementById(`price-mobile-${id}`).value = "₹" + format(price);
+                document.getElementById(`total-mobile-${id}`).value = "₹" + format(price * qty);
+
+                // sync desktop
+                document.getElementById(`item-${id}`).value = select.value;
+                document.getElementById(`qty-${id}`).value = qty;
+                document.getElementById(`price-${id}`).value = "₹" + format(price);
+                document.getElementById(`total-${id}`).value = "₹" + format(price * qty);
+
+                calculateGrandTotal();
+            }
+
+
+            window.calculateGrandTotal = function () {
+                let total = 0;
+                let count = 0;
+
+                document.querySelectorAll("#tableBodyDesktop tr").forEach((row) => {
+                    const id = row.dataset.rowId;
+
+                    const select = document.getElementById(`item-${id}`);
+                    const selectedOption = select.options[select.selectedIndex];
+
+                    const price = Number(selectedOption?.dataset.price || 0);
+                    const qty = Number(document.getElementById(`qty-${id}`).value) || 0;
+
+                    if (price > 0 && qty > 0) {
+                        total += price * qty;
+                        count++;
+                    }
+                });
+
+                document.getElementById("grandTotal").textContent = format(total);
+                document.getElementById("itemCount").textContent = count;
+            }
+
+
+            window.resetAll = function () {
+                if (!confirm("Reset all data?")) return;
+                document.getElementById("tableBodyDesktop").innerHTML = "";
+                document.getElementById("mobileCards").innerHTML = "";
+                rowCounter = 0;
+                for (let i = 0; i < MIN_ROWS; i++) addRow();
+                calculateGrandTotal();
+            }
+
+            function format(num) {
+                return num.toLocaleString("en-IN", {
+                    maximumFractionDigits: 2,
+                });
+            }
+
+            window.openEditModal = function () {
+                document.getElementById("editModeModal").classList.remove("hidden");
+                document.getElementById("editModeModal").classList.add("flex");
+                loadItemsForEdit();
+            }
+
+            window.closeEditModal = function () {
+                document.getElementById("editModeModal").classList.add("hidden");
+                document.getElementById("editModeModal").classList.remove("flex");
+            }
+
+
+            window.generateReport = function () {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF("p", "mm", "a4");
+
+                let tableData = [];
+                let grandTotal = 0;
+
+                document.querySelectorAll("#tableBodyDesktop tr").forEach(row => {
+                    const id = row.dataset.rowId;
+                    const select = document.getElementById(`item-${id}`);
+
+                    if (!select || select.selectedIndex === 0) return;
+
+                    const selectedOption = select.options[select.selectedIndex];
+                    const itemName = selectedOption.text;
+                    const price = Number(selectedOption.dataset.price || 0); // ✅ FIX
+                    const qty = Number(document.getElementById(`qty-${id}`).value) || 0;
+
+                    if (price > 0 && qty > 0) {
+                        const total = price * qty;
+                        grandTotal += total;
+
+                        tableData.push([
+                            itemName,
+                            qty.toString(),
+                            `Rs. ${price.toLocaleString("en-IN")}`,
+                            `Rs. ${total.toLocaleString("en-IN")}`
+                        ]);
+                    }
+                });
+
+                if (tableData.length === 0) {
+                    alert("Please select at least one item");
+                    return;
+                }
+
+                /* ===== HEADER ===== */
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(18);
+                doc.text("MOSAM SOLAR", 105, 18, { align: "center" });
+
+                doc.setDrawColor(180);
+                doc.line(14, 24, 196, 24);
+
+                doc.setFontSize(12);
+                doc.text("Cost Estimation Report", 14, 32);
+
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(11);
+                doc.text(
+                    `Date: ${new Date().toLocaleDateString("en-IN")}`,
+                    196,
+                    32,
+                    { align: "right" }
+                );
+
+                /* ===== TABLE ===== */
+                doc.autoTable({
+                    startY: 40,
+                    theme: "grid",
+                    head: [["Item Name", "Quantity", "Unit Price", "Total"]],
+                    body: tableData,
+                    styles: {
+                        fontSize: 10,
+                        cellPadding: 3
+                    },
+                    headStyles: {
+                        fillColor: [79, 70, 229],
+                        textColor: 255,
+                        fontStyle: "bold"
+                    },
+                    columnStyles: {
+                        1: { halign: "center" },
+                        2: { halign: "right" },
+                        3: { halign: "right" }
+                    }
+                });
+
+                /* ===== GRAND TOTAL ===== */
+                const finalY = doc.lastAutoTable.finalY + 10;
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(12);
+                doc.text(
+                    `Grand Total: Rs. ${grandTotal.toLocaleString("en-IN")}`,
+                    14,
+                    finalY
+                );
+
+                /* ===== FOOTER ===== */
+                const pageHeight = doc.internal.pageSize.height;
+                doc.setFontSize(9);
+                doc.setTextColor(120);
+                doc.text(
+                    "© 2025 Mosam Solar. All rights reserved.",
+                    105,
+                    pageHeight - 10,
+                    { align: "center" }
+                );
+
+                doc.save("Mosam_Solar_Cost_Estimation.pdf");
+            }
+
+        </script>
+
+
+
+</body>
+
+</html>
